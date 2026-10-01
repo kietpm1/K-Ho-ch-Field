@@ -1328,7 +1328,7 @@ exportBtn.addEventListener(
         "Tên KH":
           row.ten_kh || "",
 
-        "User CBXLN":
+        "CBXLN":
           row.user_cb_xln || "",
 
         "Ngày field":
