@@ -1,34 +1,32 @@
-"use strict";
+(() => {
+  "use strict";
 
-/* ============================================================
-   QUẢN LÝ DỮ LIỆU FIELD - MANAGER.JS
-   ============================================================
+  /* ============================================================
+     QUẢN LÝ DỮ LIỆU FIELD - MANAGER.JS
+     ============================================================
 
-   SUPABASE TABLE:
-   field_khach_hang
+     BẢNG SUPABASE:
+     field_khach_hang
 
-   DATABASE COLUMNS:
-   - id
-   - cif
-   - ten_kh
-   - user_cb_xln
-   - ngay_field
-   - created_at
+     CÁC CỘT:
+     - cif
+     - ten_kh
+     - user_cb_xln
+     - ngay_field
 
-   CHỨC NĂNG:
-   - Đăng nhập Supabase Auth
-   - Hiển thị email quản lý
-   - Lọc ngày field
-   - Lọc CBXLN
-   - Tìm CIF / Tên KH
-   - Làm mới
-   - Sửa
-   - Xóa
-   - Phân trang
-   - Thống kê
-   - Xuất Excel
-   - Excel tự tô màu header
-   - Excel tự kẻ bảng
+     CHỨC NĂNG:
+     - Đăng nhập Supabase Auth
+     - Lọc CBXLN
+     - Lọc ngày field
+     - Làm mới dữ liệu
+     - Phân trang
+     - Sửa
+     - Xóa
+     - Xóa toàn bộ
+     - Thống kê
+     - Xuất Excel
+     - Excel tự tô màu header
+     - Excel tự kẻ bảng
 ============================================================ */
 
 
@@ -50,25 +48,21 @@ const supabaseClient =
 
 
 /* ============================================================
-   2. BIẾN TOÀN CỤC
+   2. BIẾN
 ============================================================ */
 
 let allData = [];
-
 let filteredData = [];
 
 let currentPage = 1;
+const pageSize = 20;
 
-const PAGE_SIZE = 20;
-
-let editingId = null;
+let editingRowId = null;
 
 
 /* ============================================================
-   3. LẤY ELEMENT TỪ HTML
+   3. LẤY ELEMENT
 ============================================================ */
-
-/* LOGIN */
 
 const loginBox =
   document.getElementById("loginBox");
@@ -85,89 +79,61 @@ const loginEmail =
 const loginPassword =
   document.getElementById("loginPassword");
 
-const loginMessage =
-  document.getElementById("loginMessage");
-
-const currentUser =
-  document.getElementById("currentUser");
-
-
-/* HEADER */
+const loginError =
+  document.getElementById("loginError");
 
 const logoutBtn =
   document.getElementById("logoutBtn");
 
-
-/* THỐNG KÊ */
-
-const totalRecords =
-  document.getElementById("totalRecords");
-
-const totalCif =
-  document.getElementById("totalCif");
-
-const totalUsers =
-  document.getElementById("totalUsers");
-
-
-/* FILTER */
-
-const filterDate =
-  document.getElementById("filterDate");
+const refreshBtn =
+  document.getElementById("refreshBtn");
 
 const filterUser =
   document.getElementById("filterUser");
 
-const searchText =
-  document.getElementById("searchText");
+const filterDate =
+  document.getElementById("filterDate");
 
-const filterBtn =
-  document.getElementById("filterBtn");
-
-const refreshBtn =
-  document.getElementById("refreshBtn");
+const clearFilterBtn =
+  document.getElementById("clearFilterBtn");
 
 const exportBtn =
   document.getElementById("exportBtn");
 
+const deleteAllBtn =
+  document.getElementById("deleteAllBtn");
 
-/* TABLE */
+const tableBody =
+  document.getElementById("tableBody");
 
-const dataTableBody =
-  document.getElementById("dataTableBody");
+const pagination =
+  document.getElementById("pagination");
 
-const emptyMessage =
-  document.getElementById("emptyMessage");
+const totalCount =
+  document.getElementById("totalCount");
 
+const uniqueUserCount =
+  document.getElementById("uniqueUserCount");
 
-/* PAGINATION */
-
-const prevBtn =
-  document.getElementById("prevBtn");
-
-const nextBtn =
-  document.getElementById("nextBtn");
-
-const pageInfo =
-  document.getElementById("pageInfo");
+const totalAmount =
+  document.getElementById("totalAmount");
 
 
-/* MODAL */
+/* ============================================================
+   4. MODAL SỬA
+============================================================ */
 
 const editModal =
   document.getElementById("editModal");
 
-const closeModalBtn =
-  document.getElementById("closeModalBtn");
+const closeEditModal =
+  document.getElementById("closeEditModal");
 
 const cancelEditBtn =
   document.getElementById("cancelEditBtn");
 
-const editForm =
-  document.getElementById("editForm");
-
-const editId =
-  document.getElementById("editId");
+const saveEditBtn =
+  document.getElementById("saveEditBtn");
 
 const editCif =
   document.getElementById("editCif");
@@ -183,400 +149,176 @@ const editNgayField =
 
 
 /* ============================================================
-   4. HỖ TRỢ HIỂN THỊ LOGIN / MANAGER
+   5. HÀM FORMAT NGÀY
+============================================================ */
+
+function formatDate(dateValue) {
+
+  if (!dateValue) {
+    return "";
+  }
+
+  const date =
+    new Date(dateValue);
+
+  if (isNaN(date.getTime())) {
+    return dateValue;
+  }
+
+  const day =
+    String(date.getDate()).padStart(2, "0");
+
+  const month =
+    String(date.getMonth() + 1).padStart(2, "0");
+
+  const year =
+    date.getFullYear();
+
+  return `${day}/${month}/${year}`;
+}
+
+
+/* ============================================================
+   6. FORMAT SỐ
+============================================================ */
+
+function formatNumber(value) {
+
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return "0";
+  }
+
+  return Number(value).toLocaleString("vi-VN");
+}
+
+
+/* ============================================================
+   7. KIỂM TRA ĐĂNG NHẬP
+============================================================ */
+
+async function checkSession() {
+
+  const {
+    data,
+    error
+  } = await supabaseClient.auth.getSession();
+
+  if (error) {
+    console.error(
+      "Lỗi kiểm tra session:",
+      error
+    );
+
+    showLogin();
+    return;
+  }
+
+  if (data.session) {
+    showManager();
+    await loadData();
+  } else {
+    showLogin();
+  }
+}
+
+
+/* ============================================================
+   8. HIỆN LOGIN
 ============================================================ */
 
 function showLogin() {
 
   if (loginBox) {
-    loginBox.classList.remove("hidden");
+    loginBox.style.display = "block";
   }
 
   if (managerBox) {
-    managerBox.classList.add("hidden");
+    managerBox.style.display = "none";
   }
-
 }
 
+
+/* ============================================================
+   9. HIỆN MANAGER
+============================================================ */
 
 function showManager() {
 
   if (loginBox) {
-    loginBox.classList.add("hidden");
+    loginBox.style.display = "none";
   }
 
   if (managerBox) {
-    managerBox.classList.remove("hidden");
+    managerBox.style.display = "block";
   }
-
 }
 
 
 /* ============================================================
-   5. HIỂN THỊ MESSAGE LOGIN
-============================================================ */
-
-function showLoginMessage(message) {
-
-  if (!loginMessage) {
-    return;
-  }
-
-  loginMessage.textContent =
-    message || "";
-
-  loginMessage.classList.remove(
-    "hidden"
-  );
-
-}
-
-
-/* ============================================================
-   6. ẨN MESSAGE LOGIN
-============================================================ */
-
-function hideLoginMessage() {
-
-  if (!loginMessage) {
-    return;
-  }
-
-  loginMessage.textContent = "";
-
-  loginMessage.classList.add(
-    "hidden"
-  );
-
-}
-
-
-/* ============================================================
-   7. FORMAT NGÀY
-============================================================ */
-
-function formatDate(value) {
-
-  if (!value) {
-    return "";
-  }
-
-  /*
-   * Nếu đã là YYYY-MM-DD
-   * thì xử lý trực tiếp.
-   */
-
-  const text =
-    String(value);
-
-  const match =
-    text.match(
-      /^(\d{4})-(\d{2})-(\d{2})/
-    );
-
-  if (match) {
-
-    return (
-      match[3] +
-      "/" +
-      match[2] +
-      "/" +
-      match[1]
-    );
-
-  }
-
-
-  const date =
-    new Date(value);
-
-  if (
-    isNaN(
-      date.getTime()
-    )
-  ) {
-
-    return text;
-
-  }
-
-
-  const day =
-    String(
-      date.getDate()
-    ).padStart(
-      2,
-      "0"
-    );
-
-  const month =
-    String(
-      date.getMonth() + 1
-    ).padStart(
-      2,
-      "0"
-    );
-
-  const year =
-    date.getFullYear();
-
-
-  return (
-    day +
-    "/" +
-    month +
-    "/" +
-    year
-  );
-
-}
-
-
-/* ============================================================
-   8. ESCAPE HTML
-============================================================ */
-
-function escapeHtml(value) {
-
-  return String(
-    value ?? ""
-  )
-    .replaceAll(
-      "&",
-      "&amp;"
-    )
-    .replaceAll(
-      "<",
-      "&lt;"
-    )
-    .replaceAll(
-      ">",
-      "&gt;"
-    )
-    .replaceAll(
-      '"',
-      "&quot;"
-    )
-    .replaceAll(
-      "'",
-      "&#039;"
-    );
-
-}
-
-
-/* ============================================================
-   9. FORMAT TEXT SEARCH
-============================================================ */
-
-function normalizeText(value) {
-
-  return String(
-    value ?? ""
-  )
-    .trim()
-    .toLowerCase();
-
-}
-
-
-/* ============================================================
-   10. KIỂM TRA SESSION
-============================================================ */
-
-async function checkSession() {
-
-  try {
-
-    const {
-      data,
-      error
-    } =
-      await supabaseClient.auth.getSession();
-
-
-    if (error) {
-
-      console.error(
-        "Lỗi kiểm tra session:",
-        error
-      );
-
-      showLogin();
-
-      return;
-
-    }
-
-
-    if (
-      data &&
-      data.session
-    ) {
-
-      showManager();
-
-
-      if (currentUser) {
-
-        currentUser.textContent =
-          data.session.user.email ||
-          "";
-
-      }
-
-
-      await loadData();
-
-    } else {
-
-      showLogin();
-
-    }
-
-  } catch (error) {
-
-    console.error(
-      "checkSession:",
-      error
-    );
-
-    showLogin();
-
-  }
-
-}
-
-
-/* ============================================================
-   11. ĐĂNG NHẬP
+   10. ĐĂNG NHẬP
 ============================================================ */
 
 if (loginForm) {
 
   loginForm.addEventListener(
     "submit",
-    async function (event) {
+    async function (e) {
 
-      event.preventDefault();
+      e.preventDefault();
 
-      hideLoginMessage();
-
+      if (loginError) {
+        loginError.textContent = "";
+      }
 
       const email =
-        loginEmail
-          ? loginEmail.value.trim()
-          : "";
+        loginEmail.value.trim();
 
       const password =
-        loginPassword
-          ? loginPassword.value
-          : "";
+        loginPassword.value;
 
+      if (!email || !password) {
 
-      if (
-        !email ||
-        !password
-      ) {
-
-        showLoginMessage(
-          "Vui lòng nhập Email và mật khẩu."
-        );
+        if (loginError) {
+          loginError.textContent =
+            "Vui lòng nhập đầy đủ thông tin.";
+        }
 
         return;
-
       }
 
+      const {
+        data,
+        error
+      } =
+        await supabaseClient.auth.signInWithPassword({
+          email,
+          password
+        });
 
-      const submitButton =
-        loginForm.querySelector(
-          'button[type="submit"]'
-        );
-
-
-      if (submitButton) {
-
-        submitButton.disabled =
-          true;
-
-        submitButton.textContent =
-          "ĐANG ĐĂNG NHẬP...";
-
-      }
-
-
-      try {
-
-        const {
-          data,
-          error
-        } =
-          await supabaseClient.auth
-            .signInWithPassword({
-              email,
-              password
-            });
-
-
-        if (error) {
-
-          console.error(
-            "Login error:",
-            error
-          );
-
-          showLoginMessage(
-            "Email hoặc mật khẩu không đúng."
-          );
-
-          return;
-
-        }
-
-
-        if (
-          data &&
-          data.session
-        ) {
-
-          showManager();
-
-
-          if (currentUser) {
-
-            currentUser.textContent =
-              data.session.user.email ||
-              "";
-
-          }
-
-
-          await loadData();
-
-        }
-
-      } catch (error) {
+      if (error) {
 
         console.error(
+          "Login error:",
           error
         );
 
-        showLoginMessage(
-          "Đã xảy ra lỗi khi đăng nhập."
-        );
-
-      } finally {
-
-        if (submitButton) {
-
-          submitButton.disabled =
-            false;
-
-          submitButton.textContent =
-            "ĐĂNG NHẬP";
-
+        if (loginError) {
+          loginError.textContent =
+            "Email hoặc mật khẩu không đúng.";
         }
 
+        return;
+      }
+
+      if (data.session) {
+
+        showManager();
+
+        await loadData();
       }
 
     }
@@ -586,7 +328,7 @@ if (loginForm) {
 
 
 /* ============================================================
-   12. ĐĂNG XUẤT
+   11. ĐĂNG XUẤT
 ============================================================ */
 
 if (logoutBtn) {
@@ -595,51 +337,26 @@ if (logoutBtn) {
     "click",
     async function () {
 
-      try {
+      const {
+        error
+      } =
+        await supabaseClient.auth.signOut();
 
-        const {
-          error
-        } =
-          await supabaseClient.auth
-            .signOut();
-
-
-        if (error) {
-
-          console.error(
-            "Logout error:",
-            error
-          );
-
-          alert(
-            "Không thể đăng xuất: " +
-            error.message
-          );
-
-          return;
-
-        }
-
-
-        allData = [];
-
-        filteredData = [];
-
-        currentPage = 1;
-
-        showLogin();
-
-      } catch (error) {
+      if (error) {
 
         console.error(
+          "Logout error:",
           error
         );
 
         alert(
-          "Có lỗi khi đăng xuất."
+          "Không thể đăng xuất."
         );
 
+        return;
       }
+
+      showLogin();
 
     }
   );
@@ -648,24 +365,19 @@ if (logoutBtn) {
 
 
 /* ============================================================
-   13. LOAD DỮ LIỆU TỪ SUPABASE
+   12. LOAD DỮ LIỆU
 ============================================================ */
 
 async function loadData() {
 
   try {
 
-    if (dataTableBody) {
+    if (tableBody) {
 
-      dataTableBody.innerHTML = `
+      tableBody.innerHTML = `
         <tr>
-          <td
-            colspan="5"
-            style="
-              text-align:center;
-              padding:25px;
-            "
-          >
+          <td colspan="6"
+              style="text-align:center;padding:20px;">
             Đang tải dữ liệu...
           </td>
         </tr>
@@ -673,15 +385,12 @@ async function loadData() {
 
     }
 
-
     const {
       data,
       error
     } =
       await supabaseClient
-        .from(
-          "field_khach_hang"
-        )
+        .from("field_khach_hang")
         .select("*")
         .order(
           "ngay_field",
@@ -696,38 +405,29 @@ async function loadData() {
           }
         );
 
-
     if (error) {
 
       console.error(
-        "Supabase load error:",
+        "Lỗi load dữ liệu:",
         error
       );
 
       alert(
-        "Không thể tải dữ liệu:\n" +
+        "Không thể tải dữ liệu: " +
         error.message
       );
 
       return;
-
     }
 
-
     allData =
-      Array.isArray(data)
-        ? data
-        : [];
-
+      data || [];
 
     applyFilters();
 
   } catch (error) {
 
-    console.error(
-      "loadData:",
-      error
-    );
+    console.error(error);
 
     alert(
       "Có lỗi xảy ra khi tải dữ liệu."
@@ -739,107 +439,53 @@ async function loadData() {
 
 
 /* ============================================================
-   14. ÁP DỤNG BỘ LỌC
+   13. LỌC DỮ LIỆU
 ============================================================ */
 
 function applyFilters() {
 
-  const dateValue =
+  const userKeyword =
+    filterUser
+      ? filterUser.value
+          .trim()
+          .toLowerCase()
+      : "";
+
+  const selectedDate =
     filterDate
       ? filterDate.value
       : "";
 
-
-  const userValue =
-    filterUser
-      ? normalizeText(
-          filterUser.value
-        )
-      : "";
-
-
-  const searchValue =
-    searchText
-      ? normalizeText(
-          searchText.value
-        )
-      : "";
-
-
   filteredData =
     allData.filter(
-      function (row) {
+      row => {
 
-        /* ----------------------------------------------------
-           LỌC NGÀY
-        ---------------------------------------------------- */
-
-        const matchDate =
-          !dateValue ||
+        const user =
           String(
-            row.ngay_field || ""
+            row.user_cb_xln || ""
           )
-            .substring(
-              0,
-              10
-            ) === dateValue;
-
-
-        /* ----------------------------------------------------
-           LỌC CBXLN
-        ---------------------------------------------------- */
-
-        const cbxln =
-          normalizeText(
-            row.user_cb_xln
-          );
-
+            .trim()
+            .toLowerCase();
 
         const matchUser =
-          !userValue ||
-          cbxln.includes(
-            userValue
-          );
+          !userKeyword ||
+          user.includes(userKeyword);
 
-
-        /* ----------------------------------------------------
-           TÌM CIF / TÊN KH
-        ---------------------------------------------------- */
-
-        const cif =
-          normalizeText(
-            row.cif
-          );
-
-        const tenKh =
-          normalizeText(
-            row.ten_kh
-          );
-
-
-        const matchSearch =
-          !searchValue ||
-          cif.includes(
-            searchValue
-          ) ||
-          tenKh.includes(
-            searchValue
-          );
-
+        const matchDate =
+          !selectedDate ||
+          row.ngay_field === selectedDate;
 
         return (
-          matchDate &&
           matchUser &&
-          matchSearch
+          matchDate
         );
 
       }
     );
 
-
   currentPage = 1;
 
-  updateStats();
+  renderStats();
 
   renderTable();
 
@@ -849,13 +495,13 @@ function applyFilters() {
 
 
 /* ============================================================
-   15. NÚT LỌC
+   14. LỌC USER
 ============================================================ */
 
-if (filterBtn) {
+if (filterUser) {
 
-  filterBtn.addEventListener(
-    "click",
+  filterUser.addEventListener(
+    "input",
     function () {
 
       applyFilters();
@@ -867,40 +513,47 @@ if (filterBtn) {
 
 
 /* ============================================================
-   16. ENTER TRONG Ô TÌM KIẾM
+   15. LỌC NGÀY
 ============================================================ */
 
-[
-  filterUser,
-  searchText
-].forEach(
-  function (element) {
+if (filterDate) {
 
-    if (!element) {
-      return;
+  filterDate.addEventListener(
+    "change",
+    function () {
+
+      applyFilters();
+
     }
+  );
+
+}
 
 
-    element.addEventListener(
-      "keydown",
-      function (event) {
+/* ============================================================
+   16. XÓA BỘ LỌC
+============================================================ */
 
-        if (
-          event.key ===
-          "Enter"
-        ) {
+if (clearFilterBtn) {
 
-          event.preventDefault();
+  clearFilterBtn.addEventListener(
+    "click",
+    function () {
 
-          applyFilters();
-
-        }
-
+      if (filterUser) {
+        filterUser.value = "";
       }
-    );
 
-  }
-);
+      if (filterDate) {
+        filterDate.value = "";
+      }
+
+      applyFilters();
+
+    }
+  );
+
+}
 
 
 /* ============================================================
@@ -913,29 +566,7 @@ if (refreshBtn) {
     "click",
     async function () {
 
-      refreshBtn.disabled =
-        true;
-
-      const oldText =
-        refreshBtn.textContent;
-
-      refreshBtn.textContent =
-        "ĐANG TẢI...";
-
-
-      try {
-
-        await loadData();
-
-      } finally {
-
-        refreshBtn.disabled =
-          false;
-
-        refreshBtn.textContent =
-          oldText;
-
-      }
+      await loadData();
 
     }
   );
@@ -947,90 +578,55 @@ if (refreshBtn) {
    18. THỐNG KÊ
 ============================================================ */
 
-function updateStats() {
+function renderStats() {
 
-  /* ----------------------------------------------------------
-     TỔNG HỒ SƠ
-  ---------------------------------------------------------- */
+  if (totalCount) {
 
-  if (totalRecords) {
-
-    totalRecords.textContent =
+    totalCount.textContent =
       filteredData.length;
 
   }
 
 
   /* ----------------------------------------------------------
-     SỐ CIF KHÔNG TRÙNG
+     ĐẾM CBXLN KHÔNG TRÙNG
   ---------------------------------------------------------- */
 
-  const cifSet =
+  const users =
     new Set();
 
-
   filteredData.forEach(
-    function (row) {
+    row => {
 
-      const cif =
+      const user =
         String(
-          row.cif || ""
-        ).trim();
+          row.user_cb_xln || ""
+        )
+          .trim();
 
-
-      if (cif) {
-
-        cifSet.add(
-          cif
-        );
-
+      if (user) {
+        users.add(user);
       }
 
     }
   );
 
+  if (uniqueUserCount) {
 
-  if (totalCif) {
-
-    totalCif.textContent =
-      cifSet.size;
+    uniqueUserCount.textContent =
+      users.size;
 
   }
 
 
   /* ----------------------------------------------------------
-     SỐ CÁN BỘ KHÔNG TRÙNG
+     TỔNG
   ---------------------------------------------------------- */
 
-  const userSet =
-    new Set();
+  if (totalAmount) {
 
-
-  filteredData.forEach(
-    function (row) {
-
-      const user =
-        String(
-          row.user_cb_xln || ""
-        ).trim();
-
-
-      if (user) {
-
-        userSet.add(
-          user
-        );
-
-      }
-
-    }
-  );
-
-
-  if (totalUsers) {
-
-    totalUsers.textContent =
-      userSet.size;
+    totalAmount.textContent =
+      filteredData.length;
 
   }
 
@@ -1043,70 +639,58 @@ function updateStats() {
 
 function renderTable() {
 
-  if (!dataTableBody) {
+  if (!tableBody) {
+    return;
+  }
+
+  tableBody.innerHTML = "";
+
+  if (filteredData.length === 0) {
+
+    tableBody.innerHTML = `
+      <tr>
+        <td
+          colspan="6"
+          style="
+            text-align:center;
+            padding:25px;
+          "
+        >
+          Không có dữ liệu.
+        </td>
+      </tr>
+    `;
+
     return;
   }
 
 
-  dataTableBody.innerHTML = "";
+  const start =
+    (currentPage - 1) *
+    pageSize;
 
-
-  if (
-    filteredData.length === 0
-  ) {
-
-    if (emptyMessage) {
-
-      emptyMessage.classList.remove(
-        "hidden"
-      );
-
-    }
-
-
-    return;
-
-  }
-
-
-  if (emptyMessage) {
-
-    emptyMessage.classList.add(
-      "hidden"
-    );
-
-  }
-
-
-  const startIndex =
-    (
-      currentPage - 1
-    ) *
-    PAGE_SIZE;
-
-
-  const endIndex =
-    startIndex +
-    PAGE_SIZE;
-
+  const end =
+    start + pageSize;
 
   const pageData =
     filteredData.slice(
-      startIndex,
-      endIndex
+      start,
+      end
     );
 
 
   pageData.forEach(
-    function (row) {
+    (row, index) => {
 
       const tr =
-        document.createElement(
-          "tr"
-        );
+        document.createElement("tr");
+
+      const stt =
+        start + index + 1;
 
 
       tr.innerHTML = `
+        <td>${stt}</td>
 
         <td>
           ${escapeHtml(
@@ -1133,370 +717,274 @@ function renderTable() {
         </td>
 
         <td>
-
-          <div
-            class="action-buttons"
-          >
+          <div class="action-buttons">
 
             <button
               type="button"
-              class="btn btn-primary btn-edit"
-              data-id="${escapeHtml(
-                row.id
-              )}"
+              class="btn-edit"
+              onclick="openEditModal('${row.id}')"
+              title="Sửa"
             >
               ✏️
             </button>
 
             <button
               type="button"
-              class="btn btn-danger btn-delete"
-              data-id="${escapeHtml(
-                row.id
-              )}"
+              class="btn-delete"
+              onclick="deleteRow('${row.id}')"
+              title="Xóa"
             >
               🗑️
             </button>
 
           </div>
-
         </td>
-
       `;
 
-
-      dataTableBody.appendChild(
-        tr
-      );
+      tableBody.appendChild(tr);
 
     }
   );
 
-
-  /* ----------------------------------------------------------
-     GÁN SỰ KIỆN SỬA
-  ---------------------------------------------------------- */
-
-  dataTableBody
-    .querySelectorAll(
-      ".btn-edit"
-    )
-    .forEach(
-      function (button) {
-
-        button.addEventListener(
-          "click",
-          function () {
-
-            const id =
-              button.dataset.id;
-
-            openEditModal(
-              id
-            );
-
-          }
-        );
-
-      }
-    );
+}
 
 
-  /* ----------------------------------------------------------
-     GÁN SỰ KIỆN XÓA
-  ---------------------------------------------------------- */
+/* ============================================================
+   20. ESCAPE HTML
+============================================================ */
 
-  dataTableBody
-    .querySelectorAll(
-      ".btn-delete"
-    )
-    .forEach(
-      function (button) {
+function escapeHtml(value) {
 
-        button.addEventListener(
-          "click",
-          async function () {
-
-            const id =
-              button.dataset.id;
-
-            await deleteRow(
-              id
-            );
-
-          }
-        );
-
-      }
-    );
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 
 }
 
 
 /* ============================================================
-   20. PHÂN TRANG
+   21. PHÂN TRANG
 ============================================================ */
 
 function renderPagination() {
 
+  if (!pagination) {
+    return;
+  }
+
+  pagination.innerHTML = "";
+
   const totalPages =
-    Math.max(
-      1,
-      Math.ceil(
-        filteredData.length /
-        PAGE_SIZE
-      )
+    Math.ceil(
+      filteredData.length /
+      pageSize
     );
 
-
-  if (currentPage > totalPages) {
-
-    currentPage =
-      totalPages;
-
+  if (totalPages <= 1) {
+    return;
   }
 
 
-  if (pageInfo) {
+  /* ----------------------------------------------------------
+     NÚT TRANG TRƯỚC
+  ---------------------------------------------------------- */
 
-    pageInfo.textContent =
-      `Trang ${currentPage} / ${totalPages}`;
+  const prevBtn =
+    document.createElement("button");
 
-  }
+  prevBtn.textContent =
+    "‹";
 
-
-  if (prevBtn) {
-
-    prevBtn.disabled =
-      currentPage <= 1;
-
-  }
-
-
-  if (nextBtn) {
-
-    nextBtn.disabled =
-      currentPage >= totalPages;
-
-  }
-
-}
-
-
-/* ============================================================
-   21. TRANG TRƯỚC
-============================================================ */
-
-if (prevBtn) {
+  prevBtn.disabled =
+    currentPage === 1;
 
   prevBtn.addEventListener(
     "click",
     function () {
 
-      if (
-        currentPage <= 1
-      ) {
+      if (currentPage > 1) {
 
-        return;
+        currentPage--;
+
+        renderTable();
+
+        renderPagination();
 
       }
-
-
-      currentPage--;
-
-      renderTable();
-
-      renderPagination();
-
-
-      window.scrollTo({
-        top: 0,
-        behavior: "smooth"
-      });
 
     }
   );
 
-}
+  pagination.appendChild(
+    prevBtn
+  );
 
 
-/* ============================================================
-   22. TRANG SAU
-============================================================ */
+  /* ----------------------------------------------------------
+     CÁC TRANG
+  ---------------------------------------------------------- */
 
-if (nextBtn) {
+  for (
+    let i = 1;
+    i <= totalPages;
+    i++
+  ) {
+
+    const pageBtn =
+      document.createElement("button");
+
+    pageBtn.textContent =
+      i;
+
+    if (i === currentPage) {
+
+      pageBtn.classList.add(
+        "active"
+      );
+
+    }
+
+    pageBtn.addEventListener(
+      "click",
+      function () {
+
+        currentPage = i;
+
+        renderTable();
+
+        renderPagination();
+
+      }
+    );
+
+    pagination.appendChild(
+      pageBtn
+    );
+
+  }
+
+
+  /* ----------------------------------------------------------
+     NÚT TRANG SAU
+  ---------------------------------------------------------- */
+
+  const nextBtn =
+    document.createElement("button");
+
+  nextBtn.textContent =
+    "›";
+
+  nextBtn.disabled =
+    currentPage === totalPages;
 
   nextBtn.addEventListener(
     "click",
     function () {
 
-      const totalPages =
-        Math.max(
-          1,
-          Math.ceil(
-            filteredData.length /
-            PAGE_SIZE
-          )
-        );
-
-
       if (
-        currentPage >=
+        currentPage <
         totalPages
       ) {
 
-        return;
+        currentPage++;
+
+        renderTable();
+
+        renderPagination();
 
       }
 
-
-      currentPage++;
-
-      renderTable();
-
-      renderPagination();
-
-
-      window.scrollTo({
-        top: 0,
-        behavior: "smooth"
-      });
-
     }
+  );
+
+  pagination.appendChild(
+    nextBtn
   );
 
 }
 
 
 /* ============================================================
-   23. MỞ MODAL SỬA
+   22. MỞ MODAL SỬA
 ============================================================ */
 
-function openEditModal(id) {
+window.openEditModal =
+  function (id) {
 
-  const row =
-    allData.find(
-      function (item) {
-
-        return String(
-          item.id
-        ) === String(id);
-
-      }
-    );
-
-
-  if (!row) {
-
-    alert(
-      "Không tìm thấy dữ liệu."
-    );
-
-    return;
-
-  }
-
-
-  editingId =
-    id;
-
-
-  if (editId) {
-
-    editId.value =
-      row.id || "";
-
-  }
-
-
-  if (editCif) {
-
-    editCif.value =
-      row.cif || "";
-
-  }
-
-
-  if (editTenKh) {
-
-    editTenKh.value =
-      row.ten_kh || "";
-
-  }
-
-
-  if (editUserCbXln) {
-
-    editUserCbXln.value =
-      row.user_cb_xln || "";
-
-  }
-
-
-  if (editNgayField) {
-
-    editNgayField.value =
-      String(
-        row.ngay_field || ""
-      ).substring(
-        0,
-        10
+    const row =
+      allData.find(
+        item =>
+          String(item.id) ===
+          String(id)
       );
 
-  }
+    if (!row) {
 
+      alert(
+        "Không tìm thấy dữ liệu."
+      );
 
-  if (editModal) {
+      return;
+    }
 
-    editModal.classList.remove(
-      "hidden"
-    );
+    editingRowId =
+      id;
 
-    editModal.style.display =
-      "flex";
+    if (editCif) {
+      editCif.value =
+        row.cif || "";
+    }
 
-  }
+    if (editTenKh) {
+      editTenKh.value =
+        row.ten_kh || "";
+    }
 
-}
+    if (editUserCbXln) {
+      editUserCbXln.value =
+        row.user_cb_xln || "";
+    }
+
+    if (editNgayField) {
+      editNgayField.value =
+        row.ngay_field || "";
+    }
+
+    if (editModal) {
+      editModal.style.display =
+        "flex";
+    }
+
+  };
 
 
 /* ============================================================
-   24. ĐÓNG MODAL
+   23. ĐÓNG MODAL
 ============================================================ */
 
-function closeEditModal() {
+function closeModal() {
 
-  editingId =
+  editingRowId =
     null;
 
-
   if (editModal) {
 
-    editModal.classList.add(
-      "hidden"
-    );
-
     editModal.style.display =
-      "";
+      "none";
 
   }
 
 }
 
 
-/* ============================================================
-   25. NÚT ĐÓNG MODAL
-============================================================ */
+if (closeEditModal) {
 
-if (closeModalBtn) {
-
-  closeModalBtn.addEventListener(
+  closeEditModal.addEventListener(
     "click",
-    function () {
-
-      closeEditModal();
-
-    }
+    closeModal
   );
 
 }
@@ -1506,32 +994,28 @@ if (cancelEditBtn) {
 
   cancelEditBtn.addEventListener(
     "click",
-    function () {
-
-      closeEditModal();
-
-    }
+    closeModal
   );
 
 }
 
 
-/* ============================================================
-   26. CLICK NGOÀI MODAL
-============================================================ */
+/* ------------------------------------------------------------
+   CLICK NGOÀI MODAL
+------------------------------------------------------------ */
 
 if (editModal) {
 
   editModal.addEventListener(
     "click",
-    function (event) {
+    function (e) {
 
       if (
-        event.target ===
+        e.target ===
         editModal
       ) {
 
-        closeEditModal();
+        closeModal();
 
       }
 
@@ -1542,26 +1026,22 @@ if (editModal) {
 
 
 /* ============================================================
-   27. LƯU SỬA
+   24. LƯU SỬA
 ============================================================ */
 
-if (editForm) {
+if (saveEditBtn) {
 
-  editForm.addEventListener(
-    "submit",
-    async function (event) {
+  saveEditBtn.addEventListener(
+    "click",
+    async function () {
 
-      event.preventDefault();
-
-
-      if (!editingId) {
+      if (!editingRowId) {
 
         alert(
           "Không xác định được dữ liệu cần sửa."
         );
 
         return;
-
       }
 
 
@@ -1570,18 +1050,15 @@ if (editForm) {
           ? editCif.value.trim()
           : "";
 
-
       const tenKh =
         editTenKh
           ? editTenKh.value.trim()
           : "";
 
-
       const userCbXln =
         editUserCbXln
           ? editUserCbXln.value.trim()
           : "";
-
 
       const ngayField =
         editNgayField
@@ -1601,36 +1078,23 @@ if (editForm) {
         );
 
         return;
-
       }
 
 
-      const saveButton =
-        editForm.querySelector(
-          'button[type="submit"]'
-        );
+      saveEditBtn.disabled =
+        true;
 
-
-      if (saveButton) {
-
-        saveButton.disabled =
-          true;
-
-        saveButton.textContent =
-          "ĐANG LƯU...";
-
-      }
+      saveEditBtn.textContent =
+        "Đang lưu...";
 
 
       try {
 
         const updateData = {
 
-          cif:
-            cif,
+          cif: cif,
 
-          ten_kh:
-            tenKh,
+          ten_kh: tenKh,
 
           user_cb_xln:
             userCbXln,
@@ -1645,32 +1109,27 @@ if (editForm) {
           error
         } =
           await supabaseClient
-            .from(
-              "field_khach_hang"
-            )
-            .update(
-              updateData
-            )
+            .from("field_khach_hang")
+            .update(updateData)
             .eq(
               "id",
-              editingId
+              editingRowId
             );
 
 
         if (error) {
 
           console.error(
-            "Update error:",
+            "Lỗi update:",
             error
           );
 
           alert(
-            "Không thể cập nhật:\n" +
+            "Không thể cập nhật: " +
             error.message
           );
 
           return;
-
         }
 
 
@@ -1678,17 +1137,14 @@ if (editForm) {
           "Đã cập nhật dữ liệu."
         );
 
-
-        closeEditModal();
+        closeModal();
 
         await loadData();
 
+
       } catch (error) {
 
-        console.error(
-          "save edit:",
-          error
-        );
+        console.error(error);
 
         alert(
           "Có lỗi xảy ra khi cập nhật."
@@ -1696,15 +1152,11 @@ if (editForm) {
 
       } finally {
 
-        if (saveButton) {
+        saveEditBtn.disabled =
+          false;
 
-          saveButton.disabled =
-            false;
-
-          saveButton.textContent =
-            "LƯU THAY ĐỔI";
-
-        }
+        saveEditBtn.textContent =
+          "Lưu";
 
       }
 
@@ -1715,109 +1167,222 @@ if (editForm) {
 
 
 /* ============================================================
-   28. XÓA MỘT DÒNG
+   25. XÓA 1 DÒNG
 ============================================================ */
 
-async function deleteRow(id) {
+window.deleteRow =
+  async function (id) {
 
-  const row =
-    allData.find(
-      function (item) {
-
-        return String(
-          item.id
-        ) === String(id);
-
-      }
-    );
-
-
-  if (!row) {
-
-    alert(
-      "Không tìm thấy dữ liệu."
-    );
-
-    return;
-
-  }
-
-
-  const confirmDelete =
-    confirm(
-      "Bạn có chắc muốn xóa dữ liệu này?\n\n" +
-      "CIF: " +
-      (row.cif || "") +
-      "\n" +
-      "Tên KH: " +
-      (row.ten_kh || "") +
-      "\n" +
-      "CBXLN: " +
-      (row.user_cb_xln || "")
-    );
-
-
-  if (!confirmDelete) {
-
-    return;
-
-  }
-
-
-  try {
-
-    const {
-      error
-    } =
-      await supabaseClient
-        .from(
-          "field_khach_hang"
-        )
-        .delete()
-        .eq(
-          "id",
-          id
-        );
-
-
-    if (error) {
-
-      console.error(
-        "Delete error:",
-        error
+    const row =
+      allData.find(
+        item =>
+          String(item.id) ===
+          String(id)
       );
 
+    if (!row) {
+
       alert(
-        "Không thể xóa:\n" +
-        error.message
+        "Không tìm thấy dữ liệu."
       );
 
       return;
-
     }
 
 
-    await loadData();
+    const confirmDelete =
+      confirm(
+        `Bạn có chắc muốn xóa dữ liệu của CIF ${row.cif || ""}?`
+      );
+
+    if (!confirmDelete) {
+      return;
+    }
 
 
-  } catch (error) {
+    try {
 
-    console.error(
-      "deleteRow:",
-      error
-    );
+      const {
+        error
+      } =
+        await supabaseClient
+          .from("field_khach_hang")
+          .delete()
+          .eq(
+            "id",
+            id
+          );
 
-    alert(
-      "Có lỗi xảy ra khi xóa."
-    );
 
-  }
+      if (error) {
+
+        console.error(
+          "Lỗi xóa:",
+          error
+        );
+
+        alert(
+          "Không thể xóa: " +
+          error.message
+        );
+
+        return;
+      }
+
+
+      alert(
+        "Đã xóa dữ liệu."
+      );
+
+      await loadData();
+
+
+    } catch (error) {
+
+      console.error(error);
+
+      alert(
+        "Có lỗi xảy ra khi xóa."
+      );
+
+    }
+
+  };
+
+
+/* ============================================================
+   26. XÓA TOÀN BỘ
+============================================================ */
+
+if (deleteAllBtn) {
+
+  deleteAllBtn.addEventListener(
+    "click",
+    async function () {
+
+      if (allData.length === 0) {
+
+        alert(
+          "Không có dữ liệu để xóa."
+        );
+
+        return;
+      }
+
+
+      const confirmDelete =
+        confirm(
+          "CẢNH BÁO!\n\n" +
+          "Bạn có chắc chắn muốn XÓA TOÀN BỘ dữ liệu?\n\n" +
+          "Thao tác này không thể hoàn tác."
+        );
+
+
+      if (!confirmDelete) {
+        return;
+      }
+
+
+      const confirmAgain =
+        prompt(
+          "Nhập XOA để xác nhận xóa toàn bộ:"
+        );
+
+
+      if (
+        String(confirmAgain || "")
+          .trim()
+          .toUpperCase() !==
+        "XOA"
+      ) {
+
+        alert(
+          "Đã hủy thao tác."
+        );
+
+        return;
+      }
+
+
+      deleteAllBtn.disabled =
+        true;
+
+      deleteAllBtn.textContent =
+        "Đang xóa...";
+
+
+      try {
+
+        /*
+         * Xóa toàn bộ bằng điều kiện
+         * id không null.
+         *
+         * Vì id của các dòng hợp lệ
+         * đều phải có giá trị.
+         */
+
+        const {
+          error
+        } =
+          await supabaseClient
+            .from("field_khach_hang")
+            .delete()
+            .not(
+              "id",
+              "is",
+              null
+            );
+
+
+        if (error) {
+
+          console.error(
+            "Lỗi xóa toàn bộ:",
+            error
+          );
+
+          alert(
+            "Không thể xóa toàn bộ: " +
+            error.message
+          );
+
+          return;
+        }
+
+
+        alert(
+          "Đã xóa toàn bộ dữ liệu."
+        );
+
+        await loadData();
+
+
+      } catch (error) {
+
+        console.error(error);
+
+        alert(
+          "Có lỗi xảy ra khi xóa toàn bộ."
+        );
+
+      } finally {
+
+        deleteAllBtn.disabled =
+          false;
+
+        deleteAllBtn.textContent =
+          "Xóa toàn bộ";
+
+      }
+
+    }
+  );
 
 }
 
 
 /* ============================================================
-   29. XUẤT EXCEL
+   27. XUẤT EXCEL - EXCELJS
 ============================================================ */
 
 if (exportBtn) {
@@ -1826,22 +1391,19 @@ if (exportBtn) {
     "click",
     async function () {
 
-      if (
-        filteredData.length === 0
-      ) {
+      if (filteredData.length === 0) {
 
         alert(
           "Không có dữ liệu để xuất."
         );
 
         return;
-
       }
 
 
-      /* ------------------------------------------------------
+      /* --------------------------------------------------------
          KIỂM TRA EXCELJS
-      ------------------------------------------------------ */
+      -------------------------------------------------------- */
 
       if (
         typeof ExcelJS ===
@@ -1849,41 +1411,36 @@ if (exportBtn) {
       ) {
 
         alert(
-          "Chưa tải được ExcelJS.\n\n" +
-          "Vui lòng kiểm tra manager.html đã dùng:\n" +
-          "exceljs@4.4.0"
+          "Chưa tải được thư viện ExcelJS.\n\n" +
+          "Hãy kiểm tra manager.html đã thêm ExcelJS chưa."
         );
 
         return;
-
       }
 
 
       exportBtn.disabled =
         true;
 
-      const oldText =
-        exportBtn.textContent;
-
       exportBtn.textContent =
-        "ĐANG XUẤT...";
+        "Đang xuất Excel...";
 
 
       try {
 
-        /* ====================================================
+        /* ======================================================
            TẠO WORKBOOK
-        ==================================================== */
+        ====================================================== */
 
         const workbook =
           new ExcelJS.Workbook();
 
 
         workbook.creator =
-          "Quản Lý Dữ Liệu Field";
+          "Quản lý Dữ liệu Field";
 
         workbook.lastModifiedBy =
-          "Quản Lý Dữ Liệu Field";
+          "Quản lý Dữ liệu Field";
 
         workbook.created =
           new Date();
@@ -1892,9 +1449,9 @@ if (exportBtn) {
           new Date();
 
 
-        /* ====================================================
-           TẠO SHEET
-        ==================================================== */
+        /* ======================================================
+           TẠO WORKSHEET
+        ====================================================== */
 
         const worksheet =
           workbook.addWorksheet(
@@ -1902,65 +1459,45 @@ if (exportBtn) {
           );
 
 
-        /* ====================================================
-           CỘT EXCEL
-        ==================================================== */
+        /* ======================================================
+           CỘT
+        ====================================================== */
 
         worksheet.columns = [
 
           {
-            header:
-              "CIF",
-
-            key:
-              "cif",
-
-            width:
-              18
+            header: "CIF",
+            key: "cif",
+            width: 18
           },
 
           {
-            header:
-              "Tên KH",
-
-            key:
-              "ten_kh",
-
-            width:
-              35
+            header: "Tên KH",
+            key: "ten_kh",
+            width: 35
           },
 
           {
-            header:
-              "CBXLN",
-
-            key:
-              "user_cb_xln",
-
-            width:
-              20
+            header: "CBXLN",
+            key: "user_cb_xln",
+            width: 20
           },
 
           {
-            header:
-              "NGÀY FIELD",
-
-            key:
-              "ngay_field",
-
-            width:
-              18
+            header: "NGÀY FIELD",
+            key: "ngay_field",
+            width: 18
           }
 
         ];
 
 
-        /* ====================================================
+        /* ======================================================
            THÊM DỮ LIỆU
-        ==================================================== */
+        ====================================================== */
 
         filteredData.forEach(
-          function (row) {
+          row => {
 
             worksheet.addRow({
 
@@ -1984,22 +1521,20 @@ if (exportBtn) {
         );
 
 
-        /* ====================================================
-           HEADER - TÔ MÀU
-        ==================================================== */
+        /* ======================================================
+           MÀU HEADER
+        ====================================================== */
 
         const headerRow =
-          worksheet.getRow(
-            1
-          );
+          worksheet.getRow(1);
 
 
         headerRow.height =
-          28;
+          25;
 
 
         headerRow.eachCell(
-          function (cell) {
+          cell => {
 
             cell.font = {
 
@@ -2098,22 +1633,17 @@ if (exportBtn) {
         );
 
 
-        /* ====================================================
-           KẺ BẢNG TOÀN BỘ DỮ LIỆU
-        ==================================================== */
+        /* ======================================================
+           KẺ BẢNG DỮ LIỆU
+        ====================================================== */
 
         worksheet.eachRow(
-          function (
-            row,
-            rowNumber
-          ) {
+          (row, rowNumber) => {
 
             if (
               rowNumber === 1
             ) {
-
               return;
-
             }
 
 
@@ -2122,7 +1652,7 @@ if (exportBtn) {
 
 
             row.eachCell(
-              function (cell) {
+              cell => {
 
                 cell.font = {
 
@@ -2143,7 +1673,7 @@ if (exportBtn) {
 
                     color: {
                       argb:
-                        "B7B7B7"
+                        "BFBFBF"
                     }
                   },
 
@@ -2153,7 +1683,7 @@ if (exportBtn) {
 
                     color: {
                       argb:
-                        "B7B7B7"
+                        "BFBFBF"
                     }
                   },
 
@@ -2163,7 +1693,7 @@ if (exportBtn) {
 
                     color: {
                       argb:
-                        "B7B7B7"
+                        "BFBFBF"
                     }
                   },
 
@@ -2173,7 +1703,7 @@ if (exportBtn) {
 
                     color: {
                       argb:
-                        "B7B7B7"
+                        "BFBFBF"
                     }
                   }
 
@@ -2191,57 +1721,60 @@ if (exportBtn) {
             );
 
 
-            /* CIF */
+            /* --------------------------------------------------
+               CIF
+            -------------------------------------------------- */
 
-            row.getCell(
-              1
-            ).alignment = {
+            row.getCell(1)
+              .alignment = {
 
-              horizontal:
-                "center",
+                horizontal:
+                  "center",
 
-              vertical:
-                "middle"
+                vertical:
+                  "middle"
 
-            };
-
-
-            /* CBXLN */
-
-            row.getCell(
-              3
-            ).alignment = {
-
-              horizontal:
-                "center",
-
-              vertical:
-                "middle"
-
-            };
+              };
 
 
-            /* NGÀY FIELD */
+            /* --------------------------------------------------
+               CBXLN
+            -------------------------------------------------- */
 
-            row.getCell(
-              4
-            ).alignment = {
+            row.getCell(3)
+              .alignment = {
 
-              horizontal:
-                "center",
+                horizontal:
+                  "center",
 
-              vertical:
-                "middle"
+                vertical:
+                  "middle"
 
-            };
+              };
+
+
+            /* --------------------------------------------------
+               NGÀY FIELD
+            -------------------------------------------------- */
+
+            row.getCell(4)
+              .alignment = {
+
+                horizontal:
+                  "center",
+
+                vertical:
+                  "middle"
+
+              };
 
           }
         );
 
 
-        /* ====================================================
+        /* ======================================================
            FREEZE HEADER
-        ==================================================== */
+        ====================================================== */
 
         worksheet.views = [
 
@@ -2257,9 +1790,9 @@ if (exportBtn) {
         ];
 
 
-        /* ====================================================
+        /* ======================================================
            AUTO FILTER
-        ==================================================== */
+        ====================================================== */
 
         worksheet.autoFilter = {
 
@@ -2272,53 +1805,85 @@ if (exportBtn) {
         };
 
 
-        /* ====================================================
-           CĂN CHỈNH TÊN KH
-        ==================================================== */
+        /* ======================================================
+           TỰ ĐIỀU CHỈNH ĐỘ RỘNG CỘT
+        ====================================================== */
 
-        worksheet
-          .getColumn(2)
-          .alignment = {
+        worksheet.columns.forEach(
+          column => {
 
-            vertical:
-              "middle",
-
-            horizontal:
-              "left",
-
-            wrapText:
-              true
-
-          };
+            let maxLength =
+              0;
 
 
-        /* ====================================================
-           ĐỘ RỘNG CỘT
-        ==================================================== */
+            column.eachCell(
+              {
+                includeEmpty:
+                  true
+              },
+              cell => {
 
-        worksheet
-          .getColumn(1)
+                const value =
+                  cell.value ===
+                  null
+                    ? ""
+                    : String(
+                        cell.value
+                      );
+
+
+                if (
+                  value.length >
+                  maxLength
+                ) {
+
+                  maxLength =
+                    value.length;
+
+                }
+
+              }
+            );
+
+
+            /*
+             * Giới hạn độ rộng để
+             * Excel không bị quá rộng.
+             */
+
+            column.width =
+              Math.min(
+                Math.max(
+                  maxLength + 3,
+                  12
+                ),
+                40
+              );
+
+          }
+        );
+
+
+        /* ======================================================
+           ĐẶT LẠI WIDTH CHO CÁC CỘT
+        ====================================================== */
+
+        worksheet.getColumn(1)
           .width = 18;
 
-
-        worksheet
-          .getColumn(2)
+        worksheet.getColumn(2)
           .width = 35;
 
-
-        worksheet
-          .getColumn(3)
+        worksheet.getColumn(3)
           .width = 20;
 
-
-        worksheet
-          .getColumn(4)
+        worksheet.getColumn(4)
           .width = 18;
 
 
-        /* ====================================================
+        /* ======================================================
            TẠO FILE
-        ==================================================== */
+        ====================================================== */
 
         const buffer =
           await workbook.xlsx.writeBuffer();
@@ -2337,7 +1902,7 @@ if (exportBtn) {
 
 
         const url =
-          URL.createObjectURL(
+          window.URL.createObjectURL(
             blob
           );
 
@@ -2352,19 +1917,14 @@ if (exportBtn) {
           url;
 
 
-        /* ====================================================
-           TÊN FILE
-        ==================================================== */
-
         const now =
           new Date();
 
 
-        const year =
+        const yyyy =
           now.getFullYear();
 
-
-        const month =
+        const mm =
           String(
             now.getMonth() + 1
           ).padStart(
@@ -2372,8 +1932,7 @@ if (exportBtn) {
             "0"
           );
 
-
-        const day =
+        const dd =
           String(
             now.getDate()
           ).padStart(
@@ -2383,7 +1942,7 @@ if (exportBtn) {
 
 
         link.download =
-          `DU_LIEU_FIELD_${year}${month}${day}.xlsx`;
+          `DU_LIEU_FIELD_${yyyy}${mm}${dd}.xlsx`;
 
 
         document.body.appendChild(
@@ -2399,7 +1958,7 @@ if (exportBtn) {
         );
 
 
-        URL.revokeObjectURL(
+        window.URL.revokeObjectURL(
           url
         );
 
@@ -2412,7 +1971,7 @@ if (exportBtn) {
       } catch (error) {
 
         console.error(
-          "Export Excel error:",
+          "Lỗi xuất Excel:",
           error
         );
 
@@ -2427,7 +1986,7 @@ if (exportBtn) {
           false;
 
         exportBtn.textContent =
-          oldText;
+          "Xuất Excel";
 
       }
 
@@ -2438,19 +1997,19 @@ if (exportBtn) {
 
 
 /* ============================================================
-   30. ESC ĐỂ ĐÓNG MODAL
+   28. ESC ĐỂ ĐÓNG MODAL
 ============================================================ */
 
 document.addEventListener(
   "keydown",
-  function (event) {
+  function (e) {
 
     if (
-      event.key ===
+      e.key ===
       "Escape"
     ) {
 
-      closeEditModal();
+      closeModal();
 
     }
 
@@ -2459,27 +2018,18 @@ document.addEventListener(
 
 
 /* ============================================================
-   31. THEO DÕI TRẠNG THÁI AUTH
+   29. THEO DÕI AUTH
 ============================================================ */
 
 supabaseClient.auth.onAuthStateChange(
-  function (
+  (
     event,
     session
-  ) {
+  ) => {
 
     if (session) {
 
       showManager();
-
-
-      if (currentUser) {
-
-        currentUser.textContent =
-          session.user.email ||
-          "";
-
-      }
 
     } else {
 
@@ -2492,7 +2042,9 @@ supabaseClient.auth.onAuthStateChange(
 
 
 /* ============================================================
-   32. KHỞI ĐỘNG
+   30. KHỞI ĐỘNG
 ============================================================ */
 
 checkSession();
+
+})();
