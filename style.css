@@ -811,3 +811,45 @@ tbody tr:hover {
   font-size: 14px;
   line-height: 1;
 }
+/* ============================================================
+   Ô NHẬP DỮ LIỆU
+============================================================ */
+
+.form-group input {
+  width: 100%;
+  padding: 14px 16px;
+
+  background: #f8fbff;
+  border: 1px solid #d7e3f0;
+  border-radius: 10px;
+
+  color: #1f2937;
+  font-size: 15px;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+/* Placeholder */
+.form-group input::placeholder {
+  color: #94a3b8;
+}
+
+/* Khi click vào ô */
+.form-group input:focus {
+  outline: none;
+
+  background: #ffffff;
+
+  border-color: #3b82f6;
+
+  box-shadow:
+    0 0 0 3px rgba(59, 130, 246, 0.10);
+}
+
+/* Khi rê chuột */
+.form-group input:hover {
+  border-color: #93c5fd;
+}
