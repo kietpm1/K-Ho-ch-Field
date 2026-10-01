@@ -131,6 +131,111 @@ const cancelEditBtn =
 
 
 /* ============================================================
+   TẠO NÚT XÓA TẤT CẢ
+   Không cần sửa manager.html
+============================================================ */
+
+let deleteAllBtn = null;
+
+
+function createDeleteAllButton() {
+
+  if (!exportBtn) {
+    return;
+  }
+
+
+  // Không tạo trùng nút
+  if (
+    document.getElementById("deleteAllBtn")
+  ) {
+
+    deleteAllBtn =
+      document.getElementById("deleteAllBtn");
+
+    return;
+  }
+
+
+  deleteAllBtn =
+    document.createElement("button");
+
+
+  deleteAllBtn.id =
+    "deleteAllBtn";
+
+
+  deleteAllBtn.type =
+    "button";
+
+
+  deleteAllBtn.textContent =
+    "🗑️ XÓA TẤT CẢ";
+
+
+  /*
+    Style trực tiếp để không cần sửa CSS
+  */
+
+  deleteAllBtn.style.width =
+    "100%";
+
+  deleteAllBtn.style.minHeight =
+    "56px";
+
+  deleteAllBtn.style.marginTop =
+    "12px";
+
+  deleteAllBtn.style.padding =
+    "14px 18px";
+
+  deleteAllBtn.style.border =
+    "none";
+
+  deleteAllBtn.style.borderRadius =
+    "14px";
+
+  deleteAllBtn.style.background =
+    "#dc2626";
+
+  deleteAllBtn.style.color =
+    "#ffffff";
+
+  deleteAllBtn.style.fontSize =
+    "16px";
+
+  deleteAllBtn.style.fontWeight =
+    "800";
+
+  deleteAllBtn.style.cursor =
+    "pointer";
+
+  deleteAllBtn.style.boxShadow =
+    "0 6px 16px rgba(220, 38, 38, 0.20)";
+
+  deleteAllBtn.style.transition =
+    "all 0.2s ease";
+
+
+  /*
+    Đặt ngay dưới nút Xuất Excel
+  */
+
+  exportBtn.insertAdjacentElement(
+    "afterend",
+    deleteAllBtn
+  );
+
+
+  deleteAllBtn.addEventListener(
+    "click",
+    deleteAllData
+  );
+
+}
+
+
+/* ============================================================
    FORMAT DATE
 ============================================================ */
 
@@ -157,7 +262,10 @@ function formatDate(dateString) {
 
 function escapeHtml(value) {
 
-  if (value === null || value === undefined) {
+  if (
+    value === null ||
+    value === undefined
+  ) {
     return "";
   }
 
@@ -179,10 +287,12 @@ function showLoginMessage(
   type = "error"
 ) {
 
-  loginMessage.textContent = text;
+  loginMessage.textContent =
+    text;
 
   loginMessage.className =
     "message " + type;
+
 }
 
 
@@ -216,11 +326,15 @@ loginForm.addEventListener(
 
     try {
 
-      const { data, error } =
-        await supabaseClient.auth.signInWithPassword({
-          email,
-          password
-        });
+      const {
+        data,
+        error
+      } =
+        await supabaseClient.auth
+          .signInWithPassword({
+            email,
+            password
+          });
 
 
       if (error) {
@@ -229,14 +343,15 @@ loginForm.addEventListener(
 
 
       if (!data.session) {
+
         throw new Error(
           "Không tạo được phiên đăng nhập."
         );
+
       }
 
 
       showManager(data.user);
-
 
       await loadData();
 
@@ -370,7 +485,9 @@ async function loadData() {
     }
 
 
-    allData = data || [];
+    allData =
+      data || [];
+
 
     applyFilters();
 
@@ -534,7 +651,9 @@ function updateStats() {
   const uniqueCif =
     new Set(
       filteredData
-        .map(row => String(row.cif || "").trim())
+        .map(row =>
+          String(row.cif || "").trim()
+        )
         .filter(Boolean)
     );
 
@@ -547,7 +666,9 @@ function updateStats() {
     new Set(
       filteredData
         .map(row =>
-          String(row.user_cb_xln || "").trim()
+          String(
+            row.user_cb_xln || ""
+          ).trim()
         )
         .filter(Boolean)
     );
@@ -569,13 +690,17 @@ function renderTable() {
     Math.max(
       1,
       Math.ceil(
-        filteredData.length / PAGE_SIZE
+        filteredData.length /
+        PAGE_SIZE
       )
     );
 
 
   if (currentPage > totalPages) {
-    currentPage = totalPages;
+
+    currentPage =
+      totalPages;
+
   }
 
 
@@ -595,22 +720,29 @@ function renderTable() {
     );
 
 
-  dataTableBody.innerHTML = "";
+  dataTableBody.innerHTML =
+    "";
 
 
   if (pageData.length === 0) {
 
-    emptyMessage.classList.remove("hidden");
+    emptyMessage.classList.remove(
+      "hidden"
+    );
 
   } else {
 
-    emptyMessage.classList.add("hidden");
+    emptyMessage.classList.add(
+      "hidden"
+    );
 
 
     pageData.forEach(row => {
 
       const tr =
-        document.createElement("tr");
+        document.createElement(
+          "tr"
+        );
 
 
       tr.innerHTML = `
@@ -658,7 +790,9 @@ function renderTable() {
       `;
 
 
-      dataTableBody.appendChild(tr);
+      dataTableBody.appendChild(
+        tr
+      );
 
     });
 
@@ -707,12 +841,16 @@ nextBtn.addEventListener(
       Math.max(
         1,
         Math.ceil(
-          filteredData.length / PAGE_SIZE
+          filteredData.length /
+          PAGE_SIZE
         )
       );
 
 
-    if (currentPage < totalPages) {
+    if (
+      currentPage <
+      totalPages
+    ) {
 
       currentPage++;
 
@@ -733,27 +871,36 @@ dataTableBody.addEventListener(
   async function (event) {
 
     const editButton =
-      event.target.closest(".edit-btn");
+      event.target.closest(
+        ".edit-btn"
+      );
 
     const deleteButton =
-      event.target.closest(".delete-btn");
+      event.target.closest(
+        ".delete-btn"
+      );
 
 
     if (editButton) {
 
       const id =
-        Number(editButton.dataset.id);
+        Number(
+          editButton.dataset.id
+        );
 
       openEditModal(id);
 
       return;
+
     }
 
 
     if (deleteButton) {
 
       const id =
-        Number(deleteButton.dataset.id);
+        Number(
+          deleteButton.dataset.id
+        );
 
       await deleteRecord(id);
 
@@ -771,7 +918,8 @@ function openEditModal(id) {
 
   const row =
     allData.find(
-      item => Number(item.id) === id
+      item =>
+        Number(item.id) === id
     );
 
 
@@ -796,7 +944,9 @@ function openEditModal(id) {
     row.ngay_field || "";
 
 
-  editModal.classList.remove("hidden");
+  editModal.classList.remove(
+    "hidden"
+  );
 
 }
 
@@ -807,7 +957,9 @@ function openEditModal(id) {
 
 function closeEditModal() {
 
-  editModal.classList.add("hidden");
+  editModal.classList.add(
+    "hidden"
+  );
 
 }
 
@@ -868,6 +1020,7 @@ editForm.addEventListener(
       );
 
       return;
+
     }
 
 
@@ -877,9 +1030,16 @@ editForm.addEventListener(
         error
       } =
         await supabaseClient
-          .from("field_khach_hang")
-          .update(updateData)
-          .eq("id", id);
+          .from(
+            "field_khach_hang"
+          )
+          .update(
+            updateData
+          )
+          .eq(
+            "id",
+            id
+          );
 
 
       if (error) {
@@ -912,14 +1072,15 @@ editForm.addEventListener(
 
 
 /* ============================================================
-   DELETE
+   DELETE TỪNG DÒNG
 ============================================================ */
 
 async function deleteRecord(id) {
 
   const row =
     allData.find(
-      item => Number(item.id) === id
+      item =>
+        Number(item.id) === id
     );
 
 
@@ -945,9 +1106,14 @@ async function deleteRecord(id) {
       error
     } =
       await supabaseClient
-        .from("field_khach_hang")
+        .from(
+          "field_khach_hang"
+        )
         .delete()
-        .eq("id", id);
+        .eq(
+          "id",
+          id
+        );
 
 
     if (error) {
@@ -972,6 +1138,168 @@ async function deleteRecord(id) {
 
 
 /* ============================================================
+   XÓA TẤT CẢ DỮ LIỆU
+============================================================ */
+
+async function deleteAllData() {
+
+  /*
+    Kiểm tra dữ liệu hiện tại
+  */
+
+  if (allData.length === 0) {
+
+    alert(
+      "Hiện tại không có dữ liệu để xóa."
+    );
+
+    return;
+  }
+
+
+  /*
+    Xác nhận lần 1
+  */
+
+  const confirmed =
+    confirm(
+      `⚠️ CẢNH BÁO\n\n` +
+      `Bạn đang chuẩn bị xóa TOÀN BỘ ${allData.length} dữ liệu field.\n\n` +
+      `Hành động này không thể hoàn tác.\n\n` +
+      `Bạn có chắc chắn muốn tiếp tục không?`
+    );
+
+
+  if (!confirmed) {
+    return;
+  }
+
+
+  /*
+    Xác nhận lần 2
+  */
+
+  const confirmText =
+    prompt(
+      `Để xác nhận xóa toàn bộ dữ liệu, hãy nhập:\n\nXOA TAT CA`
+    );
+
+
+  if (
+    confirmText === null ||
+    confirmText.trim()
+      .toUpperCase() !==
+      "XOA TAT CA"
+  ) {
+
+    alert(
+      "Đã hủy thao tác xóa toàn bộ."
+    );
+
+    return;
+  }
+
+
+  /*
+    Khóa nút
+  */
+
+  deleteAllBtn.disabled =
+    true;
+
+  deleteAllBtn.textContent =
+    "ĐANG XÓA...";
+
+
+  try {
+
+    /*
+      id của bảng là bigint identity
+      nên dùng điều kiện id >= 0
+      để Supabase thực hiện DELETE
+      trên toàn bộ bản ghi.
+    */
+
+    const {
+      error
+    } =
+      await supabaseClient
+        .from(
+          "field_khach_hang"
+        )
+        .delete()
+        .gte(
+          "id",
+          0
+        );
+
+
+    if (error) {
+      throw error;
+    }
+
+
+    /*
+      Xóa dữ liệu trên bộ nhớ trình duyệt
+    */
+
+    allData = [];
+
+    filteredData = [];
+
+    currentPage = 1;
+
+
+    /*
+      Cập nhật giao diện ngay
+    */
+
+    updateStats();
+
+    renderTable();
+
+
+    /*
+      Đảm bảo dữ liệu thực tế
+      trên Supabase đã được tải lại
+    */
+
+    await loadData();
+
+
+    alert(
+      "✅ Đã xóa toàn bộ dữ liệu field thành công."
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "Lỗi xóa tất cả:",
+      error
+    );
+
+
+    alert(
+      "❌ Không thể xóa toàn bộ dữ liệu.\n\n" +
+      "Vui lòng kiểm tra quyền DELETE trong Supabase."
+    );
+
+
+  } finally {
+
+    deleteAllBtn.disabled =
+      false;
+
+    deleteAllBtn.textContent =
+      "🗑️ XÓA TẤT CẢ";
+
+  }
+
+}
+
+
+/* ============================================================
    EXPORT EXCEL
 ============================================================ */
 
@@ -979,7 +1307,9 @@ exportBtn.addEventListener(
   "click",
   function () {
 
-    if (filteredData.length === 0) {
+    if (
+      filteredData.length === 0
+    ) {
 
       alert(
         "Không có dữ liệu để xuất."
@@ -990,7 +1320,7 @@ exportBtn.addEventListener(
 
 
     const exportData =
-      filteredData.map((row, index) => ({
+      filteredData.map(row => ({
 
         "CIF":
           row.cif || "",
@@ -1002,7 +1332,9 @@ exportBtn.addEventListener(
           row.user_cb_xln || "",
 
         "Ngày field":
-          formatDate(row.ngay_field)
+          formatDate(
+            row.ngay_field
+          )
 
       }));
 
@@ -1015,13 +1347,21 @@ exportBtn.addEventListener(
 
     worksheet["!cols"] = [
 
-      { wch: 18 },
+      {
+        wch: 18
+      },
 
-      { wch: 35 },
+      {
+        wch: 35
+      },
 
-      { wch: 20 },
+      {
+        wch: 20
+      },
 
-      { wch: 15 }
+      {
+        wch: 15
+      }
 
     ];
 
@@ -1048,13 +1388,19 @@ exportBtn.addEventListener(
     const mm =
       String(
         now.getMonth() + 1
-      ).padStart(2, "0");
+      ).padStart(
+        2,
+        "0"
+      );
 
 
     const dd =
       String(
         now.getDate()
-      ).padStart(2, "0");
+      ).padStart(
+        2,
+        "0"
+      );
 
 
     const filename =
@@ -1093,5 +1439,16 @@ editModal.addEventListener(
 /* ============================================================
    START
 ============================================================ */
+
+/*
+  Tạo nút XÓA TẤT CẢ
+*/
+
+createDeleteAllButton();
+
+
+/*
+  Kiểm tra đăng nhập
+*/
 
 checkSession();
