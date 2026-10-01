@@ -5,7 +5,7 @@
 ============================================================ */
 
 const SUPABASE_URL =
-  "https://fgtdazkcdorobjthaffh.supabase.co;
+  "https://fgtdazkcdorobjthaffh.supabase.co";
 
 const SUPABASE_ANON_KEY =
   "sb_publishable_7n94js70mGrGw5kqhdJiSQ_pzfz74bY";
