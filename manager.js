@@ -1831,7 +1831,7 @@ if (exportBtn) {
       XLSX.utils.book_append_sheet(
         workbook,
         worksheet,
-        "Dữ Liệu Field"
+        "KẾ HOẠCH FIELD NGÀY"
       );
 
 
@@ -1862,7 +1862,7 @@ if (exportBtn) {
 
 
       const filename =
-        `DU_LIEU_FIELD_${yyyy}${mm}${dd}.xlsx`;
+        `KE_HOACH_FIELD_NGAY_${yyyy}${mm}${dd}.xlsx`;
 
 
       XLSX.writeFile(
