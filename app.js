@@ -5,10 +5,10 @@
 ============================================================ */
 
 const SUPABASE_URL =
-  "DAN_SUPABASE_URL_CUA_BAN_VAO_DAY";
+  "https://fgtdazkcdorobjthaffh.supabase.co;
 
 const SUPABASE_ANON_KEY =
-  "DAN_SUPABASE_ANON_KEY_CUA_BAN_VAO_DAY";
+  "sb_publishable_7n94js70mGrGw5kqhdJiSQ_pzfz74bY";
 
 
 const supabaseClient =
