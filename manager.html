@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+
+  <meta charset="UTF-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <title>Quản Lý Dữ Liệu Field</title>
+
+  <link rel="stylesheet" href="style.css" />
+
+</head>
+
+
+<body>
+
+  <!-- ======================================================
+       LOGIN
+  ======================================================= -->
+
+  <section
+    id="loginBox"
+    class="login-page"
+  >
+
+    <div class="login-card">
+
+      <h1>QUẢN LÝ DỮ LIỆU FIELD</h1>
+
+      <p>Đăng nhập quản lý</p>
+
+
+      <form id="loginForm">
+
+        <div class="form-group">
+
+          <label>Email</label>
+
+          <input
+            type="email"
+            id="loginEmail"
+            placeholder="Email quản lý"
+            required
+          />
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label>Mật khẩu</label>
+
+          <input
+            type="password"
+            id="loginPassword"
+            placeholder="Mật khẩu"
+            required
+          />
+
+        </div>
+
+
+        <button
+          type="submit"
+          class="btn btn-primary"
+        >
+          ĐĂNG NHẬP
+        </button>
+
+      </form>
+
+
+      <div
+        id="loginMessage"
+        class="message hidden"
+      ></div>
+
+    </div>
+
+  </section>
+
+
+  <!-- ======================================================
+       MANAGER
+  ======================================================= -->
+
+  <section
+    id="managerBox"
+    class="manager-page hidden"
+  >
+
+    <header class="topbar">
+
+      <div>
+
+        <h1>QUẢN LÝ DỮ LIỆU FIELD</h1>
+
+        <span id="currentUser"></span>
+
+      </div>
+
+
+      <button
+        id="logoutBtn"
+        class="btn btn-danger"
+      >
+        ĐĂNG XUẤT
+      </button>
+
+    </header>
+
+
+    <main class="manager-content">
+
+
+      <!-- ==================================================
+           THỐNG KÊ
+      =================================================== -->
+
+      <section class="stats-grid">
+
+        <div class="stat-card">
+
+          <span>TỔNG HỒ SƠ</span>
+
+          <strong id="totalRecords">
+            0
+          </strong>
+
+        </div>
+
+
+        <div class="stat-card">
+
+          <span>SỐ CIF</span>
+
+          <strong id="totalCif">
+            0
+          </strong>
+
+        </div>
+
+
+        <div class="stat-card">
+
+          <span>SỐ CÁN BỘ</span>
+
+          <strong id="totalUsers">
+            0
+          </strong>
+
+        </div>
+
+      </section>
+
+
+      <!-- ==================================================
+           BỘ LỌC
+      =================================================== -->
+
+      <section class="filter-card">
+
+        <div class="filter-grid">
+
+
+          <div class="form-group">
+
+            <label>
+              Ngày field
+            </label>
+
+            <input
+              type="date"
+              id="filterDate"
+            />
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label>
+              User CBXLN
+            </label>
+
+            <input
+              type="text"
+              id="filterUser"
+              placeholder="Nhập User CBXLN"
+            />
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label>
+              Tìm kiếm
+            </label>
+
+            <input
+              type="text"
+              id="searchText"
+              placeholder="CIF hoặc tên KH"
+            />
+
+          </div>
+
+        </div>
+
+
+        <div class="filter-actions">
+
+          <button
+            id="filterBtn"
+            class="btn btn-primary"
+          >
+            LỌC
+          </button>
+
+
+          <button
+            id="refreshBtn"
+            class="btn btn-secondary"
+          >
+            LÀM MỚI
+          </button>
+
+
+          <button
+            id="exportBtn"
+            class="btn btn-success"
+          >
+            XUẤT EXCEL
+          </button>
+
+        </div>
+
+      </section>
+
+
+      <!-- ==================================================
+           TABLE
+      =================================================== -->
+
+      <section class="table-card">
+
+        <div class="table-wrapper">
+
+          <table>
+
+            <thead>
+
+              <tr>
+
+                <th>CIF</th>
+
+                <th>Tên KH</th>
+
+                <th>User CBXLN</th>
+
+                <th>Ngày field</th>
+
+                <th>Thao tác</th>
+
+              </tr>
+
+            </thead>
+
+
+            <tbody id="dataTableBody">
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+
+        <div
+          id="emptyMessage"
+          class="empty-message hidden"
+        >
+          Không có dữ liệu.
+        </div>
+
+
+        <div class="pagination">
+
+          <button
+            id="prevBtn"
+            class="btn btn-secondary"
+          >
+            ← Trước
+          </button>
+
+
+          <span id="pageInfo">
+            Trang 1
+          </span>
+
+
+          <button
+            id="nextBtn"
+            class="btn btn-secondary"
+          >
+            Sau →
+          </button>
+
+        </div>
+
+      </section>
+
+    </main>
+
+  </section>
+
+
+  <!-- ======================================================
+       MODAL SỬA
+  ======================================================= -->
+
+  <div
+    id="editModal"
+    class="modal hidden"
+  >
+
+    <div class="modal-content">
+
+      <div class="modal-header">
+
+        <h2>SỬA DỮ LIỆU</h2>
+
+        <button
+          id="closeModalBtn"
+          class="modal-close"
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      <form id="editForm">
+
+        <input
+          type="hidden"
+          id="editId"
+        />
+
+
+        <div class="form-group">
+
+          <label>CIF</label>
+
+          <input
+            type="text"
+            id="editCif"
+            required
+          />
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label>Tên KH</label>
+
+          <input
+            type="text"
+            id="editTenKh"
+            required
+          />
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label>User CBXLN</label>
+
+          <input
+            type="text"
+            id="editUserCbXln"
+            required
+          />
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label>Ngày field</label>
+
+          <input
+            type="date"
+            id="editNgayField"
+            required
+          />
+
+        </div>
+
+
+        <div class="modal-actions">
+
+          <button
+            type="button"
+            id="cancelEditBtn"
+            class="btn btn-secondary"
+          >
+            HỦY
+          </button>
+
+
+          <button
+            type="submit"
+            class="btn btn-primary"
+          >
+            LƯU THAY ĐỔI
+          </button>
+
+        </div>
+
+      </form>
+
+    </div>
+
+  </div>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <script src="manager.js"></script>
+
+</body>
+</html>
