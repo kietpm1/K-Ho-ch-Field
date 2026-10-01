@@ -791,3 +791,23 @@ tbody tr:hover {
   }
 
 }
+/* ============================================================
+   THÔNG BÁO BẢO MẬT CUỐI TRANG
+============================================================ */
+
+.security-note {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  margin-top: 18px;
+  padding-bottom: 10px;
+  font-size: 13px;
+  color: #6b7280;
+  text-align: center;
+}
+
+.lock-icon {
+  font-size: 14px;
+  line-height: 1;
+}
